@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ランダムチームトーナメントジェネレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 1rem;
+        }
+        .match-card {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .match-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .team-name-display {
+            user-select: none;
+            cursor: pointer;
+        }
+        .team-name-input {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            outline: none;
+            box-shadow: none;
+        }
+        /* 勝者を示すスタイル */
+        .winning-team-box {
+            background-color: #d1fae5; /* green-100 */
+        }
+        .winning-team-name {
+            font-weight: bold;
+            color: #166534; /* green-800 */
+        }
+        .editable-name {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background-color: #fff;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .editable-name:hover {
+            background-color: #f3f4f6;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .editable-name-icon {
+            margin-right: 0.5rem;
+            color: #6b7280;
+        }
+        .round-robin-cell {
+            min-height: 4rem;
+        }
+        /* ランキング表のスタイル */
+        .ranking-table th, .ranking-table td {
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .ranking-table th {
+            background-color: #e5e7eb;
+            font-weight: 600;
+        }
+        .ranking-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        /* ボタンのスタイル */
+        .increment-button, .decrement-button {
+            background-color: #e5e7eb;
+            color: #4b5563;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .increment-button:hover, .decrement-button:hover {
+            background-color: #d1d5db;
+        }
+        .increment-button {
+            border-top-right-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+        }
+        .decrement-button {
+            border-top-left-radius: 0.5rem;
+            border-bottom-left-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-4xl border border-gray-200">
+        <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">ランダムチームトーナメントジェネレーター</h1>
+        
+        <div class="mb-6">
+            <label for="memberNames" class="block text-sm font-medium text-gray-700 mb-2">
+                メンバーの名前を入力してください (1行に1人)
+            </label>
+            <div class="flex flex-col">
+                <textarea id="memberNames" rows="10" placeholder="例：&#10;山田太郎&#10;鈴木花子&#10;田中一郎&#10;..." class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
+                <div class="flex items-center space-x-4 mt-2">
+                    <div class="flex items-center">
+                        <label for="teamSize" class="text-sm font-medium text-gray-700 mr-2">チーム人数:</label>
+                        <div class="flex">
+                            <button onclick="decrementTeamSize()" class="decrement-button rounded-l-lg border border-gray-300">-</button>
+                            <input type="number" id="teamSize" value="3" min="1" max="10" class="w-16 p-1 border-t border-b border-gray-300 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <button onclick="incrementTeamSize()" class="increment-button rounded-r-lg border border-gray-300">+</button>
+                        </div>
+                    </div>
+                    <div id="memberCount" class="text-base text-gray-500"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex space-x-4 mb-4" id="controlButtons">
+            <button onclick="generateTeams()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                チームを生成
+            </button>
+            <button onclick="resetApp()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                リセット
+            </button>
+        </div>
+
+        <div id="results" class="mt-8 grid md:grid-cols-2 gap-8">
+            <!-- 結果がここに表示されます -->
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数でチームとトーナメントの進行状況を管理
+        let allTeams = [];
+        let winners = [];
+        let teamNames = {}; // チーム名を保存するオブジェクト
+        let roundRobinScores = {}; // 総当たり戦の勝敗と得点を記録
+
+        // DOM要素を取得
+        const memberNamesInput = document.getElementById('memberNames');
+        const teamSizeInput = document.getElementById('teamSize');
+        const memberCountDisplay = document.getElementById('memberCount');
+        const controlButtons = document.getElementById('controlButtons');
+
+        // イベントリスナーを追加
+        memberNamesInput.addEventListener('input', updateMemberCount);
+        teamSizeInput.addEventListener('input', updateMemberCount);
+
+        // メンバーの名前をシャッフルする関数
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]];
+            }
+
+            return array;
+        }
+        
+        // チーム人数を増やす関数
+        function incrementTeamSize() {
+            let currentValue = parseInt(teamSizeInput.value, 10);
+            if (currentValue < 10) {
+                teamSizeInput.value = currentValue + 1;
+                updateMemberCount();
+            }
+        }
+        
+        // チーム人数を減らす関数
+        function decrementTeamSize() {
+            let currentValue = parseInt(teamSizeInput.value, 10);
+            if (currentValue > 1) {
+                teamSizeInput.value = currentValue - 1;
+                updateMemberCount();
+            }
+        }
+
+        // メンバー数とチーム数をリアルタイムで更新する関数
+        function updateMemberCount() {
+            const names = memberNamesInput.value.split('\n').filter(name => name.trim() !== '');
+            const memberCount = names.length;
+            const teamSize = parseInt(teamSizeInput.value, 10);
+            
+            if (teamSize < 1) {
+                teamSizeInput.value = 1;
+            }
+            if (teamSize > 10) {
+                teamSizeInput.value = 10;
+            }
+            
+            let teamCount = Math.floor(memberCount / teamSize);
+            if (memberCount % teamSize !== 0) {
+                teamCount++;
+            }
+            
+            memberCountDisplay.textContent = `現在 ${memberCount}人 : ${teamCount}チーム`;
+        }
+
+        // チームを生成するメイン関数
+        function generateTeams() {
+            const memberNames = memberNamesInput.value;
+            const names = memberNames.split('\n').filter(name => name.trim() !== '');
+            const teamSize = parseInt(teamSizeInput.value, 10);
+
+            if (names.length < teamSize) {
+                document.getElementById('results').innerHTML = `
+                    <div class="md:col-span-2 text-center text-red-500">
+                        メンバーの数がチーム人数(${teamSize}人)を下回っています。
+                    </div>
+                `;
+                return;
+            }
+
+            // メンバー名をシャッフル
+            const shuffledNames = shuffle(names);
+
+            // チームを作成
+            allTeams = [];
+            teamNames = {};
+            
+            let currentNames = [...shuffledNames];
+            let teamIndex = 0;
+            
+            while (currentNames.length > 0) {
+                const team = currentNames.splice(0, teamSize);
+                allTeams.push(team);
+                teamNames[teamIndex] = `チーム ${teamIndex + 1}`;
+                teamIndex++;
+            }
+
+            winners = [];
+            roundRobinScores = {};
+            displayTeamsAndButtons();
+        }
+
+        // アプリをリセットする関数
+        function resetApp() {
+            allTeams = [];
+            winners = [];
+            teamNames = {};
+            roundRobinScores = {};
+            memberNamesInput.value = '';
+            document.getElementById('results').innerHTML = '';
+            teamSizeInput.value = 3;
+            updateMemberCount(); // リセット時にも表示を更新
+        }
+        
+        // チーム分け結果と新しいボタンを表示する関数
+        function displayTeamsAndButtons() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div id="teams-section" class="md:col-span-2">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">チーム分け</h2>
+                    <div class="flex flex-wrap -m-2">
+                    ${allTeams.map((team, index) => `
+                        <div class="w-full sm:w-1/2 p-2">
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                <h3 class="text-lg font-semibold text-blue-600 mb-2">
+                                    <span id="team-name-split-${index}" class="team-name-display editable-name" onclick="editTeamName(${index})">
+                                        <span class="editable-name-icon">✎</span>
+                                        <span>${teamNames[index]}</span>
+                                    </span>
+                                    (${team.length}人)
+                                </h3>
+                                <ul class="list-disc list-inside space-y-1">
+                                    ${team.map(member => `
+                                        <li class="text-gray-700">${member}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `).join('')}
+                    </div>
+                </div>
+                <div class="flex space-x-4 mb-4 md:col-span-2">
+                    <button onclick="generateBracket()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        トーナメント表を生成
+                    </button>
+                    <button onclick="generateRoundRobin()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        総当たり表を生成
+                    </button>
+                    <button onclick="resetTables()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                        表をリセット
+                    </button>
+                </div>
+                <div id="table-section" class="md:col-span-2"></div>
+            `;
+            
+        }
+
+        // トーナメント表を生成して表示する関数
+        function generateBracket() {
+            const tableSection = document.getElementById('table-section');
+            tableSection.innerHTML = `
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">トーナメント表</h2>
+                    <div id="bracket-container" class="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                        ${generateBracketHTML()}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 総当たり表とスケジュールを生成して表示する関数
+        function generateRoundRobin() {
+            const tableSection = document.getElementById('table-section');
+            tableSection.innerHTML = `
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">総当たり表</h2>
+                <div id="round-robin-grid" class="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm mb-8">
+                    ${generateRoundRobinGridHTML()}
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">総当たりスケジュール</h3>
+                <div id="round-robin-schedule" class="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm mb-8">
+                    ${generateRoundRobinScheduleHTML()}
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">ランキング</h3>
+                <div id="ranking-table" class="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                    ${generateRankingTableHTML()}
+                </div>
+            `;
+        }
+        
+        // 総当たり戦のグリッド表を生成する関数
+        function generateRoundRobinGridHTML() {
+            const numTeams = allTeams.length;
+            if (numTeams < 2) {
+                return '<p>総当たり戦には最低2チームが必要です。</p>';
+            }
+        
+            let gridHTML = `<table class="w-full table-auto">
+                                <thead>
+                                    <tr>
+                                        <th class="border-b border-gray-300 p-2 text-center text-gray-500 font-normal"></th>
+                                        ${allTeams.map((team, index) => `<th class="border-b border-gray-300 p-2 text-center text-gray-500 font-normal team-name-display">${teamNames[index]}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+            
+            for (let i = 0; i < numTeams; i++) {
+                gridHTML += `<tr>
+                                <td class="border-b border-r border-gray-300 p-2 text-center font-semibold team-name-display">${teamNames[i]}</td>`;
+                for (let j = 0; j < numTeams; j++) {
+                    if (i === j) {
+                        gridHTML += `<td class="border-b border-gray-300 p-2 bg-gray-200"></td>`;
+                    } else {
+                        const scoreKey = i < j ? `${i}-${j}` : `${j}-${i}`;
+                        const score = roundRobinScores[scoreKey];
+                        let cellContent = '';
+                        if (score) {
+                            if (score.winner === i) {
+                                cellContent = '〇';
+                            } else if (score.winner === j) {
+                                cellContent = '✕';
+                            } else if (score.winner === 'draw') {
+                                cellContent = '△';
+                            }
+                        }
+                        
+                        gridHTML += `<td class="border-b border-gray-300 p-2 text-center round-robin-cell relative">
+                                        <div class="absolute inset-0 flex items-center justify-center font-bold text-2xl">${cellContent}</div>
+                                     </td>`;
+                    }
+                }
+                gridHTML += `</tr>`;
+            }
+
+            gridHTML += `</tbody></table>`;
+            return gridHTML;
+        }
+
+        
+        // 総当たり表のHTMLを生成する関数 (修正版: 勝者指定方式)
+        function generateRoundRobinScheduleHTML() {
+            const numTeams = allTeams.length;
+            if (numTeams < 2) {
+                return '<p>総当たり戦には最低2チームが必要です。</p>';
+            }
+
+            let roundRobinHTML = '';
+            
+            // サークル法の実装
+            let teamsForSchedule = [...allTeams];
+            if (numTeams % 2 !== 0) {
+                teamsForSchedule.push(null); // ダミーチームとしてnullを追加
+            }
+            const numTeamsToSchedule = teamsForSchedule.length;
+            const numRounds = numTeamsToSchedule - 1;
+            
+            roundRobinHTML += `<p class="mb-4">全 ${allTeams.length} チームによる総当たり戦、全 ${numRounds} ラウンドのスケジュールです。</p>`;
+            
+            for (let round = 0; round < numRounds; round++) {
+                roundRobinHTML += `<div class="mb-4">
+                                    <h4 class="text-xl font-semibold text-gray-900 mb-2">ラウンド ${round + 1}</h4>
+                                    <div class="space-y-2">`;
+                
+                for (let i = 0; i < numTeamsToSchedule / 2; i++) {
+                    const team1 = teamsForSchedule[i];
+                    const team2 = teamsForSchedule[numTeamsToSchedule - 1 - i];
+                    
+                    if (team1 === null || team2 === null) {
+                        const playingTeam = team1 === null ? team2 : team1;
+                        if (playingTeam !== null) {
+                            const playingTeamIndex = allTeams.indexOf(playingTeam);
+                            roundRobinHTML += `<div class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200">
+                                                    <div class="flex-1 team-name-display bg-white rounded-xl shadow-sm border border-gray-200 px-2 py-1">${teamNames[playingTeamIndex]}</div>
+                                                    <div class="mx-4 text-gray-400 font-bold">BYE (不戦勝)</div>
+                                                </div>`;
+                        }
+                    } else {
+                        const team1Index = allTeams.indexOf(team1);
+                        const team2Index = allTeams.indexOf(team2);
+                        const scoreKey = team1Index < team2Index ? `${team1Index}-${team2Index}` : `${team2Index}-${team1Index}`;
+                        const score = roundRobinScores[scoreKey];
+                        
+                        // 勝者と敗者のスタイルを適用
+                        const team1Class = (score && score.winner === team1Index) ? 'winning-team-name' : '';
+                        const team2Class = (score && score.winner === team2Index) ? 'winning-team-name' : '';
+                        
+                        // チーム名を囲むdivにクラスを追加
+                        const team1ContainerClass = (score && score.winner === team1Index) ? 'winning-team-box' : '';
+                        const team2ContainerClass = (score && score.winner === team2Index) ? 'winning-team-box' : '';
+                        
+
+                        roundRobinHTML += `<div class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200">
+                                            <div id="rr-team-${team1Index}" onclick="recordMatchResult(${team1Index}, ${team2Index})" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team1ContainerClass}">
+                                                <div class="${team1Class}">${teamNames[team1Index]}</div>
+                                            </div>
+                                            <div class="mx-4 text-gray-400 font-bold">vs</div>
+                                            <div id="rr-team-${team2Index}" onclick="recordMatchResult(${team2Index}, ${team1Index})" class="flex-1 text-right team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team2ContainerClass}">
+                                                <div class="${team2Class}">${teamNames[team2Index]}</div>
+                                            </div>
+                                        </div>`;
+                    }
+                }
+                
+                roundRobinHTML += `</div></div>`;
+                
+                // 次のラウンドのためにチームを回転
+                const lastTeam = teamsForSchedule.pop();
+                teamsForSchedule.splice(1, 0, lastTeam);
+            }
+            
+            return roundRobinHTML;
+        }
+
+        // 試合結果を記録する関数 (新)
+        function recordMatchResult(winnerIndex, loserIndex) {
+            const scoreKey = winnerIndex < loserIndex ? `${winnerIndex}-${loserIndex}` : `${loserIndex}-${winnerIndex}`;
+            
+            // 既に記録がある場合は、勝者を上書き
+            roundRobinScores[scoreKey] = { winner: winnerIndex, loser: loserIndex };
+
+            generateRoundRobin(); // 再描画して更新
+        }
+
+        // ランキング表を生成する関数
+        function generateRankingTableHTML() {
+            if (allTeams.length < 2) {
+                return '<p>ランキングを表示するには最低2チームが必要です。</p>';
+            }
+
+            let rankingData = allTeams.map((_, index) => {
+                let wins = 0;
+                let losses = 0;
+                let draws = 0;
+                
+                // 勝敗数を集計
+                for (const key in roundRobinScores) {
+                    const [team1Index, team2Index] = key.split('-').map(Number);
+                    if (roundRobinScores[key].winner === index) {
+                        wins++;
+                    } else if (roundRobinScores[key].winner === null) {
+                        // スコアがない場合は引き分け
+                        draws++;
+                    } else if (roundRobinScores[key].winner !== null) {
+                        // 相手が勝者の場合、敗北
+                        if (team1Index === index || team2Index === index) {
+                            if (roundRobinScores[key].winner !== index) {
+                                losses++;
+                            }
+                        }
+                    }
+                }
+
+                return {
+                    teamIndex: index,
+                    teamName: teamNames[index],
+                    wins: wins,
+                    losses: losses,
+                    draws: draws,
+                    points: wins * 3 + draws, // 勝利3点、引き分け1点、敗北0点
+                };
+            });
+            
+            // 試合数を数える
+            const matchesPlayed = {};
+            allTeams.forEach((_, index) => matchesPlayed[index] = 0);
+            for (const key in roundRobinScores) {
+                const [team1Index, team2Index] = key.split('-').map(Number);
+                matchesPlayed[team1Index]++;
+                matchesPlayed[team2Index]++;
+            }
+
+            // 順位付けロジック
+            rankingData.sort((a, b) => {
+                // 1. 勝ち点
+                if (b.points !== a.points) {
+                    return b.points - a.points;
+                }
+                
+                // 2. 直接対決の勝敗
+                const headToHeadKey = a.teamIndex < b.teamIndex ? `${a.teamIndex}-${b.teamIndex}` : `${b.teamIndex}-${a.teamIndex}`;
+                const headToHeadResult = roundRobinScores[headToHeadKey];
+                
+                if (headToHeadResult) {
+                    if (headToHeadResult.winner === a.teamIndex) {
+                        return -1; // Aが勝利
+                    } else if (headToHeadResult.winner === b.teamIndex) {
+                        return 1;  // Bが勝利
+                    }
+                }
+
+                // 3. 直接対決がない場合や引き分けの場合は同率
+                return 0;
+            });
+
+            // ランキング表のHTMLを生成
+            let rankingHTML = `<table class="ranking-table w-full">
+                                    <thead>
+                                        <tr>
+                                            <th class="border-b-2 border-gray-300">順位</th>
+                                            <th class="border-b-2 border-gray-300">チーム名</th>
+                                            <th class="border-b-2 border-gray-300">勝</th>
+                                            <th class="border-b-2 border-gray-300">負</th>
+                                            <th class="border-b-2 border-gray-300">分</th>
+                                            <th class="border-b-2 border-gray-300">勝ち点</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>`;
+
+            rankingData.forEach((team, index) => {
+                let rank = index + 1;
+                // 同率順位の処理
+                if (index > 0 && team.points === rankingData[index - 1].points) {
+                    // 直接対決の結果を考慮して同率か判定
+                    const prevTeam = rankingData[index - 1];
+                    const key = team.teamIndex < prevTeam.teamIndex ? `${team.teamIndex}-${prevTeam.teamIndex}` : `${prevTeam.teamIndex}-${team.teamIndex}`;
+                    const result = roundRobinScores[key];
+
+                    if (result && result.winner !== null) {
+                        // 直接対決の勝者がいる場合は順位を分ける
+                        rank = index + 1;
+                    } else {
+                        // 直接対決が引き分けの場合は同率
+                        rank = prevTeam.rank;
+                    }
+                }
+                team.rank = rank; // 次のチームのためにランクを保存
+
+                rankingHTML += `<tr>
+                                    <td class="border-b border-gray-200">${team.rank}</td>
+                                    <td class="border-b border-gray-200 text-left pl-4">${team.teamName}</td>
+                                    <td class="border-b border-gray-200 text-green-700 font-bold">${team.wins}</td>
+                                    <td class="border-b border-gray-200 text-red-700 font-bold">${team.losses}</td>
+                                    <td class="border-b border-gray-200 text-yellow-700 font-bold">${team.draws}</td>
+                                    <td class="border-b border-gray-200">${team.points}</td>
+                                </tr>`;
+            });
+
+            rankingHTML += `</tbody></table>`;
+            return rankingHTML;
+        }
+
+        // トーナメント表のHTMLを生成する関数
+        function generateBracketHTML() {
+            let bracketHTML = '';
+            let teamsForRound = [...allTeams];
+            let roundNumber = 1;
+            
+            // Winners配列をラウンド番号でソート
+            winners.sort((a, b) => a.round - b.round);
+            
+            while (teamsForRound.length > 1) {
+                bracketHTML += `<div class="mb-4">
+                                    <h4 class="text-xl font-semibold text-gray-900 mb-2">ラウンド ${roundNumber}</h4>
+                                    <div class="space-y-2">`;
+                
+                let nextRoundTeams = [];
+
+                for (let i = 0; i < teamsForRound.length; i += 2) {
+                    const team1 = teamsForRound[i];
+                    const team2 = teamsForRound[i + 1];
+                    const team1Index = allTeams.indexOf(team1);
+                    const team2Index = team2 ? allTeams.indexOf(team2) : null;
+                    const matchWinner = winners.find(w => w.round === roundNumber && (w.winnerIndex === team1Index || w.winnerIndex === team2Index));
+                    
+                    // 勝者であるチームの名前にのみクラスを直接適用
+                    const winnerClass1 = matchWinner && matchWinner.winnerIndex === team1Index ? 'winning-team-name' : '';
+                    const winnerClass2 = matchWinner && matchWinner.winnerIndex === team2Index ? 'winning-team-name' : '';
+                    
+                    // チーム名を囲むdivにクラスを追加
+                    const team1ContainerClass = (matchWinner && matchWinner.winnerIndex === team1Index) ? 'winning-team-box' : '';
+                    const team2ContainerClass = (matchWinner && matchWinner.winnerIndex === team2Index) ? 'winning-team-box' : '';
+                    
+                    if (team1 && team2) {
+                        bracketHTML += `<div id="match-${roundNumber}-${i/2}" 
+                                            class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200 match-card">
+                                            <div id="team-name-${team1Index}" onclick="recordWinner(${team1Index}, ${roundNumber}, ${team2Index})" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team1ContainerClass}">
+                                                <div class="${winnerClass1}">${teamNames[team1Index]}</div>
+                                            </div>
+                                            <div class="mx-4 text-gray-400 font-bold">vs</div>
+                                            <div id="team-name-${team2Index}" onclick="recordWinner(${team2Index}, ${roundNumber}, ${team1Index})" class="flex-1 text-right team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team2ContainerClass}">
+                                                <div class="${winnerClass2}">${teamNames[team2Index]}</div>
+                                            </div>
+                                        </div>`;
+                        if (matchWinner) {
+                             nextRoundTeams.push(allTeams[matchWinner.winnerIndex]);
+                        }
+                    } else if (team1) {
+                        // 不戦勝の場合
+                        bracketHTML += `<div class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200 winner-selected">
+                                            <div id="team-name-${team1Index}" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 winning-team-box">
+                                                <div class="winning-team-name">${teamNames[team1Index]}</div>
+                                            </div>
+                                            <div class="mx-4 text-gray-400 font-bold">BYE (不戦勝)</div>
+                                        </div>`;
+                        nextRoundTeams.push(team1);
+                    }
+                }
+                
+                bracketHTML += `</div></div>`;
+                teamsForRound = nextRoundTeams;
+                roundNumber++;
+            }
+            
+            // 最後の勝者が決まった場合のみ優勝を表示
+            if (allTeams.length > 0 && winners.length >= allTeams.length - 1) {
+                 const finalWinnerIndex = teamsForRound[0] ? allTeams.indexOf(teamsForRound[0]) : null;
+                 if (finalWinnerIndex !== null) {
+                    bracketHTML += `<div class="mt-6 text-center">
+                                        <h4 class="text-xl font-bold text-green-600 mb-2">優勝</h4>
+                                        <p class="text-3xl font-extrabold text-gray-900">${teamNames[finalWinnerIndex]}</p>
+                                    </div>`;
+                 }
+            }
+
+            return bracketHTML;
+        }
+
+        // 勝者を記録し、次のラウンドに進める関数
+        function recordWinner(winnerTeamIndex, round, loserTeamIndex) {
+            // 既にこの試合の勝者がいるか確認
+            const existingWinnerIndex = winners.findIndex(w => 
+                w.round === round && (w.winnerIndex === winnerTeamIndex || w.winnerIndex === loserTeamIndex)
+            );
+
+            if (existingWinnerIndex !== -1) {
+                // 既に勝者がいる場合は削除
+                winners.splice(existingWinnerIndex, 1);
+            }
+
+            // 新しい勝者を記録
+            winners.push({ winnerIndex: winnerTeamIndex, round: round });
+            
+            generateBracket();
+        }
+
+        // チーム名を編集する関数
+        function editTeamName(teamIndex) {
+            const teamNameElementSplit = document.getElementById(`team-name-split-${teamIndex}`);
+            const teamNameElementBracket = document.getElementById(`team-name-${teamIndex}`);
+            
+            let currentName = teamNames[teamIndex];
+            
+            // チーム分けの要素に入力フィールドを生成
+            if (teamNameElementSplit) {
+                teamNameElementSplit.innerHTML = `<input type="text" id="team-name-input-${teamIndex}-split" value="${currentName}" class="team-name-input" />`;
+                const inputElementSplit = document.getElementById(`team-name-input-${teamIndex}-split`);
+                inputElementSplit.focus();
+                
+                inputElementSplit.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        const newName = inputElementSplit.value.trim();
+                        if (newName) {
+                            teamNames[teamIndex] = newName;
+                        }
+                        displayResults();
+                    }
+                });
+                
+                inputElementSplit.addEventListener('blur', () => {
+                    const newName = inputElementSplit.value.trim();
+                    if (newName) {
+                        teamNames[teamIndex] = newName;
+                    }
+                    displayResults();
+                });
+            }
+
+            // トーナメント表の要素に入力フィールドを生成
+            if (teamNameElementBracket) {
+                teamNameElementBracket.innerHTML = `<input type="text" id="team-name-input-${teamIndex}-bracket" value="${currentName}" class="team-name-input" />`;
+                const inputElementBracket = document.getElementById(`team-name-input-${teamIndex}-bracket`);
+                
+                inputElementBracket.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        const newName = inputElementBracket.value.trim();
+                        if (newName) {
+                            teamNames[teamIndex] = newName;
+                        }
+                        displayResults();
+                    }
+                });
+                
+                inputElementBracket.addEventListener('blur', () => {
+                    const newName = inputElementBracket.value.trim();
+                    if (newName) {
+                        teamNames[teamIndex] = newName;
+                    }
+                    displayResults();
+                });
+            }
+        }
+
+        // 表をリセットする関数
+        function resetTables() {
+            winners = [];
+            roundRobinScores = {};
+            const tableSection = document.getElementById('table-section');
+            tableSection.innerHTML = '';
+        }
+
+        // チーム分けとボタンを再表示する関数
+        function displayResults() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div id="teams-section" class="md:col-span-2">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">チーム分け</h2>
+                    <div class="flex flex-wrap -m-2">
+                    ${allTeams.map((team, index) => `
+                        <div class="w-full sm:w-1/2 p-2">
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                <h3 class="text-lg font-semibold text-blue-600 mb-2">
+                                    <span id="team-name-split-${index}" class="team-name-display editable-name" onclick="editTeamName(${index})">
+                                        <span class="editable-name-icon">✎</span>
+                                        <span>${teamNames[index]}</span>
+                                    </span>
+                                    (${team.length}人)
+                                </h3>
+                                <ul class="list-disc list-inside space-y-1">
+                                    ${team.map(member => `
+                                        <li class="text-gray-700">${member}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `).join('')}
+                    </div>
+                </div>
+                <div class="flex space-x-4 mb-4 md:col-span-2">
+                    <button onclick="generateBracket()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        トーナメント表を生成
+                    </button>
+                    <button onclick="generateRoundRobin()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        総当たり表を生成
+                    </button>
+                    <button onclick="resetTables()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                        表をリセット
+                    </button>
+                </div>
+                <div id="table-section" class="md:col-span-2"></div>
+            `;
+        }
+        
+        // 初期表示時にメンバー数を更新
+        window.addEventListener('load', updateMemberCount);
+
+    </script>
+</body>
+</html>
