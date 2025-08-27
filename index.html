@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ランダムチームトーナメントジェネレーター</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -96,43 +98,102 @@
             border-top-left-radius: 0.5rem;
             border-bottom-left-radius: 0.5rem;
         }
+        /* 新しい要素のスタイル */
+        .info-box {
+            position: absolute;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+        .info-box.top-left {
+            top: 1rem;
+            left: 1rem;
+        }
+        .info-box.top-right {
+            top: 1rem;
+            right: 1rem;
+            text-align: right;
+        }
+        .bottom-center-button {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        /* ヘッダーのスペースを確保するためのパディング */
+        .main-content {
+            padding-top: 4rem; /* Adjust this value as needed */
+        }
+        /* 警告メッセージのスタイル */
+        .warning-message {
+            color: #ef4444;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-4xl border border-gray-200">
-        <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">ランダムチームトーナメントジェネレーター</h1>
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-4xl border border-gray-200 relative">
+        <!-- New Elements -->
+        <div class="info-box top-left">
+            <span class="text-gray-500 font-semibold">Version:</span>
+            <span class="text-gray-700 font-bold">1.0</span>
+        </div>
+        <div class="info-box top-right">
+            <span class="text-gray-500 font-semibold">製作者:</span>
+            <a href="https://ikumenrider.github.io/ikumenrider/" target="_blank" class="p-1 px-3 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold transition-all duration-200 transform hover:scale-105 hover:bg-gray-300">
+                育面ライダー
+            </a>
+        </div>
         
-        <div class="mb-6">
-            <label for="memberNames" class="block text-sm font-medium text-gray-700 mb-2">
-                メンバーの名前を入力してください (1行に1名)
-            </label>
-            <div class="flex flex-col">
-                <textarea id="memberNames" rows="10" placeholder="例：&#10;山田太郎&#10;鈴木花子&#10;田中一郎&#10;..." class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
-                <div class="flex items-center space-x-4 mt-2">
-                    <div class="flex items-center">
-                        <label for="teamSize" class="text-sm font-medium text-gray-700 mr-2">チーム人数:</label>
-                        <div class="flex">
-                            <button onclick="decrementTeamSize()" class="decrement-button rounded-l-lg border border-gray-300">-</button>
-                            <input type="number" id="teamSize" value="3" min="1" max="10" class="w-16 p-1 border-t border-b border-gray-300 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <button onclick="incrementTeamSize()" class="increment-button rounded-r-lg border border-gray-300">+</button>
+        <div class="main-content">
+            <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">ランダムチームトーナメントジェネレーター</h1>
+            
+            <div id="errorMessage" class="warning-message hidden"></div>
+
+            <div class="mb-6">
+                <label for="memberNames" class="block text-sm font-medium text-gray-700 mb-2">
+                    メンバーの名前を入力してください (1行に1名)
+                </label>
+                <div class="flex flex-col">
+                    <textarea id="memberNames" rows="10" placeholder="例：&#10;山田太郎&#10;鈴木花子&#10;田中一郎&#10;..." class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
+                    <div class="flex items-center space-x-4 mt-2">
+                        <div class="flex items-center">
+                            <label for="teamSize" class="text-sm font-medium text-gray-700 mr-2">チーム人数:</label>
+                            <div class="flex">
+                                <button onclick="decrementTeamSize()" class="decrement-button rounded-l-lg border border-gray-300">-</button>
+                                <input type="number" id="teamSize" value="3" min="1" max="10" class="w-16 p-1 border-t border-b border-gray-300 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <button onclick="incrementTeamSize()" class="increment-button rounded-r-lg border border-gray-300">+</button>
+                            </div>
                         </div>
+                        <div id="memberCount" class="text-base text-gray-500"></div>
                     </div>
-                    <div id="memberCount" class="text-base text-gray-500"></div>
                 </div>
+            </div>
+
+            <div class="flex space-x-4 mb-4" id="controlButtons">
+                <button onclick="generateTeams()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    チームを生成
+                </button>
+                <button onclick="resetApp()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    リセット
+                </button>
+            </div>
+
+            <div id="results" class="mt-8 grid md:grid-cols-2 gap-8">
+                <!-- 結果がここに表示されます -->
             </div>
         </div>
 
-        <div class="flex space-x-4 mb-4" id="controlButtons">
-            <button onclick="generateTeams()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                チームを生成
-            </button>
-            <button onclick="resetApp()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                リセット
-            </button>
-        </div>
-
-        <div id="results" class="mt-8 grid md:grid-cols-2 gap-8">
-            <!-- 結果がここに表示されます -->
+        <!-- New App List button -->
+        <div class="bottom-center-button">
+            <a href="https://ikumenrider.github.io/ikumenrider/" target="_blank" class="px-6 py-3 bg-green-300 text-gray-900 font-bold rounded-xl shadow-lg hover:bg-green-400 transition-all duration-200 transform hover:scale-105 text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-th-list"></i> アプリ一覧
+            </a>
         </div>
     </div>
 
@@ -142,6 +203,7 @@
         let winners = [];
         let teamNames = {}; // チーム名を保存するオブジェクト
         let roundRobinScores = {}; // 総当たり戦の勝敗と得点を記録
+        let errorMessageElement = document.getElementById('errorMessage');
 
         // DOM要素を取得
         const memberNamesInput = document.getElementById('memberNames');
@@ -205,6 +267,7 @@
             }
             
             memberCountDisplay.textContent = `現在 ${memberCount}人 : ${teamCount}チーム`;
+            errorMessageElement.classList.add('hidden'); // 入力時にエラーメッセージを非表示にする
         }
 
         // チームを生成するメイン関数
@@ -214,13 +277,12 @@
             const teamSize = parseInt(teamSizeInput.value, 10);
 
             if (names.length < teamSize) {
-                document.getElementById('results').innerHTML = `
-                    <div class="md:col-span-2 text-center text-red-500">
-                        メンバーの数がチーム人数(${teamSize}人)を下回っています。
-                    </div>
-                `;
+                errorMessageElement.textContent = `メンバーの数がチーム人数(${teamSize}人)を下回っています。`;
+                errorMessageElement.classList.remove('hidden');
                 return;
             }
+
+            errorMessageElement.classList.add('hidden');
 
             // メンバー名をシャッフル
             const shuffledNames = shuffle(names);
