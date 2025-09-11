@@ -149,7 +149,7 @@
     
 </head>
 <body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-4xl border border-gray-200 relative">
+    <div class="bg-white rounded-2xl shadow-xl p-12 w-full max-w-4xl border border-gray-200 relative">
         <!-- New Elements -->
         <div class="info-box top-left">
             <span class="text-gray-500 font-semibold">Version:</span>
@@ -172,7 +172,8 @@
                     メンバーの名前を入力してください (1行に1名)
                 </label>
                 <div class="flex flex-col">
-                    <textarea id="memberNames" rows="10" placeholder="例：&#10;山田太郎&#10;鈴木花子&#10;田中一郎&#10;..." class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
+                    <textarea id="memberNames" rows="10" placeholder="選手名1&#10;選手名2&#10;選手名3&#10;選手名4&#10;選手名5&#10;選手名6&#10;..." class="w-full p-3 border 
+border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
                     <div class="flex items-center space-x-4 mt-2">
                         <div class="flex items-center">
                             <label for="teamSize" class="text-sm font-medium text-gray-700 mr-2">チーム人数:</label>
@@ -199,13 +200,13 @@
             <div id="results" class="mt-8 grid md:grid-cols-2 gap-8">
                 <!-- 結果がここに表示されます -->
             </div>
-        </div>
-
-        <!-- New App List button -->
-        <div class="bottom-center-button">
-            <a href="https://ikumenrider.github.io/ikumenrider/" target="_blank" class="px-6 py-3 bg-green-300 text-gray-900 font-bold rounded-xl shadow-lg hover:bg-green-400 transition-all duration-200 transform hover:scale-105 text-sm flex items-center justify-center gap-2">
-                <i class="fas fa-th-list"></i> アプリ一覧
-            </a>
+            
+            <!-- App List button moved inside the container -->
+            <div class="mt-8 flex justify-center">
+                <a href="https://ikumenrider.github.io/ikumenrider/" target="_blank" class="px-6 py-3 bg-green-300 text-gray-900 font-bold rounded-xl shadow-lg hover:bg-green-400 transition-all duration-200 transform hover:scale-105 text-sm flex items-center justify-center gap-2">
+                    <i class="fas fa-th-list"></i> アプリ一覧
+                </a>
+            </div>
         </div>
     </div>
 
@@ -216,6 +217,7 @@
         let teamNames = {}; // チーム名を保存するオブジェクト
         let roundRobinScores = {}; // 総当たり戦の勝敗と得点を記録
         let errorMessageElement = document.getElementById('errorMessage');
+        let currentTournamentRound = 1; // 現在のトーナメントのラウンドを追跡
 
         // DOM要素を取得
         const memberNamesInput = document.getElementById('memberNames');
@@ -236,7 +238,7 @@
                 currentIndex--;
 
                 [array[currentIndex], array[randomIndex]] = [
-                    array[randomIndex], array[currentIndex]];
+                    array[currentIndex], array[randomIndex]];
             }
 
             return array;
@@ -315,6 +317,7 @@
 
             winners = [];
             roundRobinScores = {};
+            currentTournamentRound = 1; // Reset round tracking
             displayTeamsAndButtons();
         }
 
@@ -482,16 +485,7 @@
                     const team1 = teamsForSchedule[i];
                     const team2 = teamsForSchedule[numTeamsToSchedule - 1 - i];
                     
-                    if (team1 === null || team2 === null) {
-                        const playingTeam = team1 === null ? team2 : team1;
-                        if (playingTeam !== null) {
-                            const playingTeamIndex = allTeams.indexOf(playingTeam);
-                            roundRobinHTML += `<div class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200">
-                                                    <div class="flex-1 team-name-display bg-white rounded-xl shadow-sm border border-gray-200 px-2 py-1">${teamNames[playingTeamIndex]}</div>
-                                                    <div class="mx-4 text-gray-400 font-bold">BYE (不戦勝)</div>
-                                                </div>`;
-                        }
-                    } else {
+                    if (team1 !== null && team2 !== null) { // ダミーチームとの対戦は表示しない
                         const team1Index = allTeams.indexOf(team1);
                         const team2Index = allTeams.indexOf(team2);
                         const scoreKey = team1Index < team2Index ? `${team1Index}-${team2Index}` : `${team2Index}-${team1Index}`;
@@ -554,9 +548,10 @@
                     const [team1Index, team2Index] = key.split('-').map(Number);
                     if (roundRobinScores[key].winner === index) {
                         wins++;
-                    } else if (roundRobinScores[key].winner === null) {
-                        // スコアがない場合は引き分け
-                        draws++;
+                    } else if (roundRobinScores[key].winner === 'draw') {
+                        if (team1Index === index || team2Index === index) {
+                             draws++;
+                        }
                     } else if (roundRobinScores[key].winner !== null) {
                         // 相手が勝者の場合、敗北
                         if (team1Index === index || team2Index === index) {
@@ -632,7 +627,7 @@
                     const key = team.teamIndex < prevTeam.teamIndex ? `${team.teamIndex}-${prevTeam.teamIndex}` : `${prevTeam.teamIndex}-${team.teamIndex}`;
                     const result = roundRobinScores[key];
 
-                    if (result && result.winner !== null) {
+                    if (result && result.winner !== 'draw') {
                         // 直接対決の勝者がいる場合は順位を分ける
                         rank = index + 1;
                     } else {
@@ -656,79 +651,185 @@
             return rankingHTML;
         }
 
-        // トーナメント表のHTMLを生成する関数
+        // トーナメント表を生成する関数
         function generateBracketHTML() {
             let bracketHTML = '';
             let teamsForRound = [...allTeams];
-            let roundNumber = 1;
+            
+            // 2のべき乗を計算
+            let nextPowerOfTwo = 1;
+            while (nextPowerOfTwo < teamsForRound.length) {
+                nextPowerOfTwo *= 2;
+            }
+
+            const numByes = nextPowerOfTwo - teamsForRound.length;
+            const byeTeams = teamsForRound.splice(0, numByes);
+            let playingTeams = teamsForRound;
             
             // Winners配列をラウンド番号でソート
             winners.sort((a, b) => a.round - b.round);
             
-            while (teamsForRound.length > 1) {
+            let currentRoundTeams = playingTeams;
+            let roundNumber = 1;
+
+            // --- ラウンド1の表示 ---
+            if (playingTeams.length > 0) {
+                let round1Completed = winners.filter(w => w.round === 1).length === playingTeams.length / 2;
+                let round1Header = `ラウンド 1` + (round1Completed ? '' : '（未完了）');
+                
                 bracketHTML += `<div class="mb-4">
-                                    <h4 class="text-xl font-semibold text-gray-900 mb-2">ラウンド ${roundNumber}</h4>
+                                    <h4 class="text-xl font-semibold text-gray-900 mb-2">${round1Header}</h4>
                                     <div class="space-y-2">`;
                 
-                let nextRoundTeams = [];
-
-                for (let i = 0; i < teamsForRound.length; i += 2) {
-                    const team1 = teamsForRound[i];
-                    const team2 = teamsForRound[i + 1];
+                for (let i = 0; i < playingTeams.length; i += 2) {
+                    const team1 = playingTeams[i];
+                    const team2 = playingTeams[i + 1];
                     const team1Index = allTeams.indexOf(team1);
                     const team2Index = team2 ? allTeams.indexOf(team2) : null;
-                    const matchWinner = winners.find(w => w.round === roundNumber && (w.winnerIndex === team1Index || w.winnerIndex === team2Index));
+                    const matchWinner = winners.find(w => w.round === 1 && (w.winnerIndex === team1Index || w.winnerIndex === team2Index));
                     
-                    // 勝者であるチームの名前にのみクラスを直接適用
                     const winnerClass1 = matchWinner && matchWinner.winnerIndex === team1Index ? 'winning-team-name' : '';
                     const winnerClass2 = matchWinner && matchWinner.winnerIndex === team2Index ? 'winning-team-name' : '';
                     
-                    // チーム名を囲むdivにクラスを追加
                     const team1ContainerClass = (matchWinner && matchWinner.winnerIndex === team1Index) ? 'winning-team-box' : '';
                     const team2ContainerClass = (matchWinner && matchWinner.winnerIndex === team2Index) ? 'winning-team-box' : '';
-                    
-                    if (team1 && team2) {
-                        bracketHTML += `<div id="match-${roundNumber}-${i/2}" 
-                                            class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200 match-card">
-                                            <div id="team-name-${team1Index}" onclick="recordWinner(${team1Index}, ${roundNumber}, ${team2Index})" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team1ContainerClass}">
-                                                <div class="${winnerClass1}">${teamNames[team1Index]}</div>
-                                            </div>
-                                            <div class="mx-4 text-gray-400 font-bold">vs</div>
-                                            <div id="team-name-${team2Index}" onclick="recordWinner(${team2Index}, ${roundNumber}, ${team1Index})" class="flex-1 text-right team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team2ContainerClass}">
-                                                <div class="${winnerClass2}">${teamNames[team2Index]}</div>
-                                            </div>
-                                        </div>`;
-                        if (matchWinner) {
-                             nextRoundTeams.push(allTeams[matchWinner.winnerIndex]);
-                        }
-                    } else if (team1) {
-                        // 不戦勝の場合
-                        bracketHTML += `<div class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200 winner-selected">
-                                            <div id="team-name-${team1Index}" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 winning-team-box">
-                                                <div class="winning-team-name">${teamNames[team1Index]}</div>
-                                            </div>
-                                            <div class="mx-4 text-gray-400 font-bold">BYE (不戦勝)</div>
-                                        </div>`;
-                        nextRoundTeams.push(team1);
-                    }
+
+                    bracketHTML += `<div id="match-1-${i/2}" class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200 match-card">
+                                        <div id="team-name-${team1Index}" onclick="recordWinner(${team1Index}, 1, ${team2Index})" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team1ContainerClass}">
+                                            <div class="${winnerClass1}">${teamNames[team1Index]}</div>
+                                        </div>
+                                        <div class="mx-4 text-gray-400 font-bold">vs</div>
+                                        <div id="team-name-${team2Index}" onclick="recordWinner(${team2Index}, 1, ${team1Index})" class="flex-1 text-right team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team2ContainerClass}">
+                                            <div class="${winnerClass2}">${teamNames[team2Index]}</div>
+                                        </div>
+                                    </div>`;
                 }
                 
                 bracketHTML += `</div></div>`;
-                teamsForRound = nextRoundTeams;
-                roundNumber++;
+                currentRoundTeams = winners.filter(w => w.round === 1).map(w => allTeams[w.winnerIndex]);
+                
+                // ラウンド1が完了したら、不戦勝チームを追加して次のラウンドを構築
+                if (round1Completed) {
+                    currentRoundTeams = currentRoundTeams.concat(byeTeams);
+                    
+                    roundNumber = 2;
+                    while (currentRoundTeams.length > 1) {
+                        let nextRoundTeams = [];
+                        let roundCompleted = winners.filter(w => w.round === roundNumber).length === currentRoundTeams.length / 2;
+                        let roundHeader = `ラウンド ${roundNumber}` + (roundCompleted ? '' : '（未完了）');
+                        
+                        bracketHTML += `<div class="mb-4">
+                                            <h4 class="text-xl font-semibold text-gray-900 mb-2">${roundHeader}</h4>
+                                            <div class="space-y-2">`;
+                        
+                        for (let i = 0; i < currentRoundTeams.length; i += 2) {
+                            const team1 = currentRoundTeams[i];
+                            const team2 = currentRoundTeams[i + 1];
+                            const team1Index = allTeams.indexOf(team1);
+                            const team2Index = team2 ? allTeams.indexOf(team2) : null;
+                            const matchWinner = winners.find(w => w.round === roundNumber && (w.winnerIndex === team1Index || w.winnerIndex === team2Index));
+                            
+                            const winnerClass1 = matchWinner && matchWinner.winnerIndex === team1Index ? 'winning-team-name' : '';
+                            const winnerClass2 = matchWinner && matchWinner.winnerIndex === team2Index ? 'winning-team-name' : '';
+                            
+                            const team1ContainerClass = (matchWinner && matchWinner.winnerIndex === team1Index) ? 'winning-team-box' : '';
+                            const team2ContainerClass = (matchWinner && matchWinner.winnerIndex === team2Index) ? 'winning-team-box' : '';
+                            
+                            if (team1 && team2) {
+                                bracketHTML += `<div id="match-${roundNumber}-${i/2}" class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200 match-card">
+                                                    <div id="team-name-${team1Index}" onclick="recordWinner(${team1Index}, ${roundNumber}, ${team2Index})" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team1ContainerClass}">
+                                                        <div class="${winnerClass1}">${teamNames[team1Index]}</div>
+                                                    </div>
+                                                    <div class="mx-4 text-gray-400 font-bold">vs</div>
+                                                    <div id="team-name-${team2Index}" onclick="recordWinner(${team2Index}, ${roundNumber}, ${team1Index})" class="flex-1 text-right team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team2ContainerClass}">
+                                                        <div class="${winnerClass2}">${teamNames[team2Index]}</div>
+                                                    </div>
+                                                </div>`;
+                                if (matchWinner) {
+                                    nextRoundTeams.push(allTeams[matchWinner.winnerIndex]);
+                                }
+                            }
+                        }
+                        
+                        bracketHTML += `</div></div>`;
+                        currentRoundTeams = nextRoundTeams;
+                        roundNumber++;
+                    }
+                }
+            } else {
+                 // チーム数が2のべき乗で、かつBYEチームのみの場合
+                 let round1Header = `ラウンド 1` + (winners.length > 0 ? '' : '（未完了）');
+                 bracketHTML += `<div class="mb-4">
+                                     <h4 class="text-xl font-semibold text-gray-900 mb-2">${round1Header}</h4>
+                                     <div class="space-y-2">`;
+                
+                 byeTeams.forEach((byeTeam, index) => {
+                     bracketHTML += `<div class="p-3 bg-gray-200 rounded-xl shadow-sm border border-gray-300">
+                                         <span class="font-semibold">${teamNames[allTeams.indexOf(byeTeam)]}</span> は不戦勝です。
+                                     </div>`;
+                 });
+                 bracketHTML += `</div></div>`;
+                 
+                 // ラウンド1が完了したら次のラウンドを構築
+                 if (winners.length === 0) {
+                     let nextRoundTeams = byeTeams;
+                     roundNumber = 2;
+                     while (nextRoundTeams.length > 1) {
+                         let nextRoundWinners = [];
+                         let roundCompleted = winners.filter(w => w.round === roundNumber).length === nextRoundTeams.length / 2;
+                         let roundHeader = `ラウンド ${roundNumber}` + (roundCompleted ? '' : '（未完了）');
+
+                         bracketHTML += `<div class="mb-4">
+                                            <h4 class="text-xl font-semibold text-gray-900 mb-2">${roundHeader}</h4>
+                                            <div class="space-y-2">`;
+
+                         for (let i = 0; i < nextRoundTeams.length; i += 2) {
+                             const team1 = nextRoundTeams[i];
+                             const team2 = nextRoundTeams[i + 1];
+                             const team1Index = allTeams.indexOf(team1);
+                             const team2Index = team2 ? allTeams.indexOf(team2) : null;
+                             const matchWinner = winners.find(w => w.round === roundNumber && (w.winnerIndex === team1Index || w.winnerIndex === team2Index));
+                             
+                             const winnerClass1 = matchWinner && matchWinner.winnerIndex === team1Index ? 'winning-team-name' : '';
+                             const winnerClass2 = matchWinner && matchWinner.winnerIndex === team2Index ? 'winning-team-name' : '';
+                             const team1ContainerClass = (matchWinner && matchWinner.winnerIndex === team1Index) ? 'winning-team-box' : '';
+                             const team2ContainerClass = (matchWinner && matchWinner.winnerIndex === team2Index) ? 'winning-team-box' : '';
+
+                             if (team1 && team2) {
+                                 bracketHTML += `<div id="match-${roundNumber}-${i/2}" class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-200 match-card">
+                                                     <div id="team-name-${team1Index}" onclick="recordWinner(${team1Index}, ${roundNumber}, ${team2Index})" class="flex-1 team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team1ContainerClass}">
+                                                         <div class="${winnerClass1}">${teamNames[team1Index]}</div>
+                                                     </div>
+                                                     <div class="mx-4 text-gray-400 font-bold">vs</div>
+                                                     <div id="team-name-${team2Index}" onclick="recordWinner(${team2Index}, ${roundNumber}, ${team1Index})" class="flex-1 text-right team-name-display px-2 py-1 rounded-xl shadow-sm border border-gray-200 transition duration-200 ${team2ContainerClass}">
+                                                         <div class="${winnerClass2}">${teamNames[team2Index]}</div>
+                                                     </div>
+                                                 </div>`;
+                                 if (matchWinner) {
+                                     nextRoundWinners.push(allTeams[matchWinner.winnerIndex]);
+                                 }
+                             }
+                         }
+
+                         bracketHTML += `</div></div>`;
+                         nextRoundTeams = nextRoundWinners;
+                         roundNumber++;
+                     }
+                 }
             }
-            
-            // 最後の勝者が決まった場合のみ優勝を表示
-            if (allTeams.length > 0 && winners.length >= allTeams.length - 1) {
-                 const finalWinnerIndex = teamsForRound[0] ? allTeams.indexOf(teamsForRound[0]) : null;
-                 if (finalWinnerIndex !== null) {
+
+
+            // 最終勝者の表示
+            if (winners.length === allTeams.length - 1 && allTeams.length > 1) {
+                const finalWinnerIndex = winners[winners.length-1].winnerIndex;
+                if (finalWinnerIndex !== -1) {
                     bracketHTML += `<div class="mt-6 text-center">
                                         <h4 class="text-xl font-bold text-green-600 mb-2">優勝</h4>
                                         <p class="text-3xl font-extrabold text-gray-900">${teamNames[finalWinnerIndex]}</p>
                                     </div>`;
-                 }
+                }
             }
-
+            
             return bracketHTML;
         }
 
@@ -863,3 +964,4 @@
     </script>
 </body>
 </html>
+
